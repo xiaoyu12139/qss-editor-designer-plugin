@@ -17,6 +17,7 @@
 
 #include <QMenu>
 #include <QAction>
+#include <QStyle>
 
 static QHash<QDesignerFormWindowInterface*, QFileSystemWatcher*> g_watchers;
 
@@ -39,6 +40,7 @@ static void liveqss_ensureWatcher(QDesignerFormWindowInterface* fw, const QStrin
         QObject::connect(w, &QFileSystemWatcher::fileChanged, qApp, [fw, w](const QString& p) {
             QWidget* root = fw->mainContainer();
             if (!root) return;
+            if (!root->property("liveqss_hot_enabled").toBool()) return;
             liveqss_applyFile(p, root);
             QFileInfo info(p);
             if (info.exists() && !w->files().contains(p)) w->addPath(p);
@@ -67,7 +69,13 @@ extern "C" void LiveQss_EnsureTitleMenu(QDesignerFormWindowInterface* fw) {
     if (!m) return;
 
     QAction* bind = m->addAction(QString("bind QSS file..."));
-    QAction* hotReload = m->addAction(QString("hot reload style"));
+    bool enabled = fw->mainContainer()->property("liveqss_hot_enabled").toBool();
+    QIcon iconOn = qApp->style()->standardIcon(QStyle::SP_DialogYesButton);
+    QIcon iconOff = qApp->style()->standardIcon(QStyle::SP_DialogCancelButton);
+    QAction* hot = m->addAction(enabled ? QString("Hot Reload: On") : QString("Hot Reload: Off"));
+    hot->setCheckable(true);
+    hot->setChecked(enabled);
+    hot->setIcon(enabled ? iconOn : iconOff);
 
     QObject::connect(bind, &QAction::triggered, sub, [fw]() {
         QWidget* root = fw->mainContainer();
@@ -84,12 +92,19 @@ extern "C" void LiveQss_EnsureTitleMenu(QDesignerFormWindowInterface* fw) {
         liveqss_applyFile(path, root);
     });
 
-    QObject::connect(reload, &QAction::triggered, sub, [fw]() {
+    QObject::connect(hot, &QAction::triggered, sub, [fw, hot, iconOn, iconOff]() {
         QWidget* root = fw->mainContainer();
         if (!root) return;
+        bool cur = root->property("liveqss_hot_enabled").toBool();
+        bool next = !cur;
+        root->setProperty("liveqss_hot_enabled", next);
+        hot->setChecked(next);
+        hot->setIcon(next ? iconOn : iconOff);
+        hot->setText(next ? QString("Hot Reload: On") : QString("Hot Reload: Off"));
         QString path = root->property("designerQssPath").toString();
-        if (path.isEmpty()) return;
-        liveqss_applyFile(path, root);
+        if (next && !path.isEmpty()) {
+            liveqss_ensureWatcher(fw, path);
+        }
     });
 
     sub->setProperty("liveqss_menu_injected", true);
