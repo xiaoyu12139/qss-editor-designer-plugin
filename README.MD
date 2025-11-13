@@ -1,6 +1,6 @@
 Qt designer编辑qss实时渲染加载
 
-使用：
+使用：使用自己需要的qt工具链进行编译，开发环境使用的qt-5.15.2-msvc2019_64
 
 ```
 cmake -S . -B build_msvc2019_64 -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="C:\Qt\5.15.2\msvc2019_64"
