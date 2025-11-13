@@ -1,5 +1,4 @@
 #include "LiveQssRegistrar.h"
-#include "LiveQssTaskMenuFactory.h"
 #include <QWidget>
 #include <QApplication>
 #include <QAbstractNativeEventFilter>
@@ -68,7 +67,7 @@ extern "C" void LiveQss_EnsureTitleMenu(QDesignerFormWindowInterface* fw) {
     if (!m) return;
 
     QAction* bind = m->addAction(QString("bind QSS file..."));
-    QAction* reload = m->addAction(QString("reload style"));
+    QAction* hotReload = m->addAction(QString("hot reload style"));
 
     QObject::connect(bind, &QAction::triggered, sub, [fw]() {
         QWidget* root = fw->mainContainer();
@@ -111,7 +110,6 @@ QString LiveQssRegistrar::domXml() const { return QStringLiteral("<widget class=
 void LiveQssRegistrar::initialize(QDesignerFormEditorInterface* core) {
     if (m_initialized) return;
     auto manager = core->extensionManager();
-    manager->registerExtensions(new LiveQssTaskMenuFactory(manager), QStringLiteral("org.qt-project.Qt.Designer.TaskMenu"));
     auto fwm = core->formWindowManager();
     if (fwm) {
         int count = fwm->formWindowCount();

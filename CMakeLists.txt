@@ -13,10 +13,6 @@ if(NOT Qt6_FOUND)
 endif()
 
 set(SRC
-  src/LiveQssTaskMenu.h
-  src/LiveQssTaskMenu.cpp
-  src/LiveQssTaskMenuFactory.h
-  src/LiveQssTaskMenuFactory.cpp
   src/LiveQssRegistrar.h
   src/LiveQssRegistrar.cpp)
 
