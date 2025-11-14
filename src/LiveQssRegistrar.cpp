@@ -21,11 +21,21 @@
 
 static QHash<QDesignerFormWindowInterface*, QFileSystemWatcher*> g_watchers;
 
-static void liveqss_applyFile(const QString& path, QWidget* root) {
+static void liveqss_applyFile(const QString& path, QWidget* target) {
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return;
     QString qss = QString::fromUtf8(f.readAll());
-    root->setStyleSheet(qss);
+    target->setStyleSheet(qss);
+}
+
+static QMdiSubWindow* liveqss_findSubWindow(QDesignerFormWindowInterface* fw) {
+    QWidget* p = fw;
+    QMdiSubWindow* sub = nullptr;
+    while (p && !sub) {
+        sub = qobject_cast<QMdiSubWindow*>(p);
+        p = p->parentWidget();
+    }
+    return sub;
 }
 
 static void liveqss_ensureWatcher(QDesignerFormWindowInterface* fw, const QString& path) {
@@ -41,7 +51,10 @@ static void liveqss_ensureWatcher(QDesignerFormWindowInterface* fw, const QStrin
             QWidget* root = fw->mainContainer();
             if (!root) return;
             if (!root->property("liveqss_hot_enabled").toBool()) return;
-            liveqss_applyFile(p, root);
+            QMdiSubWindow* sub = liveqss_findSubWindow(fw);
+            if (sub) {
+                liveqss_applyFile(p, sub);
+            }
             QFileInfo info(p);
             if (info.exists() && !w->files().contains(p)) w->addPath(p);
         });
@@ -80,6 +93,8 @@ extern "C" void LiveQss_EnsureTitleMenu(QDesignerFormWindowInterface* fw) {
     QObject::connect(bind, &QAction::triggered, sub, [fw]() {
         QWidget* root = fw->mainContainer();
         if (!root) return;
+        QMdiSubWindow* sub = liveqss_findSubWindow(fw);
+        if (!sub) return;
         QString path = QFileDialog::getOpenFileName(
             root,
             QString("select QSS file"),
@@ -89,7 +104,7 @@ extern "C" void LiveQss_EnsureTitleMenu(QDesignerFormWindowInterface* fw) {
         if (path.isEmpty()) return;
         root->setProperty("designerQssPath", path);
         liveqss_ensureWatcher(fw, path);
-        liveqss_applyFile(path, root);
+        liveqss_applyFile(path, sub);
     });
 
     QObject::connect(hot, &QAction::triggered, sub, [fw, hot, iconOn, iconOff]() {
